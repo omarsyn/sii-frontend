@@ -22,7 +22,8 @@ export function titleCase(str) {
   return String(str)
     .toLowerCase()
     .replace(/(^|\s|-)(\p{L})/gu, (_, sep, ch) => sep + ch.toUpperCase())
-    .replace(/\b(De|Del|La|Las|Los|Y|E|En|Con|Para|Por|El)\b/g, (w, _m, offset) => (offset === 0 ? w : w.toLowerCase()))
+    .replace(/\b(De|Del|La|Las|Los|Y|E|A|Al|O|U|En|Con|Para|Por|El)\b/g, (w, _m, offset) => (offset === 0 ? w : w.toLowerCase()))
+    .replace(/\b(Ii|Iii|Iv|Vi|Vii|Viii|Ix)\b/g, (w) => w.toUpperCase()) // números romanos: "Taller De Investigacion Ii" -> "... II"
 }
 
 export function initials(name) {

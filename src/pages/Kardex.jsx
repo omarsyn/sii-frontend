@@ -1,20 +1,49 @@
-import { ScrollText, Table2 } from 'lucide-react'
+import { useState } from 'react'
+import { Download, ScrollText, Table2 } from 'lucide-react'
 import { api } from '../api'
+import { useAuth } from '../context/AuthContext'
+import { useToast } from '../context/ToastContext'
 import { useAsync } from '../hooks/useAsync'
-import { EmptyState, ErrorState, GradeChip, GradeLegend, Indicators, Line, PageHeader, Panel, ProgressBar, Skeleton } from '../components/ui'
+import { EmptyState, ErrorState, GradeChip, GradeLegend, Indicators, Line, PageHeader, Panel, ProgressBar, Skeleton, Spinner } from '../components/ui'
 import GenericTable from '../components/GenericTable'
 import { fmtGrade } from '../utils/grades'
 import { normalizeKardex } from '../utils/normalize'
+import { descargarKardexPdf } from '../utils/kardexPdf'
 
 export default function Kardex() {
   const { data, status, error, reload } = useAsync(async () => normalizeKardex(await api.getKardex()), [])
   const grupos = data?.grupos ?? []
   const r = data?.resumen
   const hayTipo = (data?.rows ?? []).some((m) => m.tipo)
+  const { profile } = useAuth()
+  const toast = useToast()
+  const [generando, setGenerando] = useState(false)
+
+  async function descargar() {
+    setGenerando(true)
+    try {
+      await descargarKardexPdf(data, profile ?? {})
+      toast.success('Kardex descargado')
+    } catch {
+      toast.error('No se pudo generar el PDF. Intenta de nuevo.')
+    } finally {
+      setGenerando(false)
+    }
+  }
 
   return (
     <>
-      <PageHeader title="Kardex" subtitle="Tu historial académico completo, ordenado por periodo." />
+      <PageHeader
+        title="Kardex"
+        subtitle="Tu historial académico completo, ordenado por periodo."
+        actions={
+          grupos.length ? (
+            <button type="button" className="btn btn-primary" onClick={descargar} disabled={generando}>
+              {generando ? <><Spinner size={16} /> Generando…</> : <><Download size={16} aria-hidden="true" /> Descargar PDF</>}
+            </button>
+          ) : null
+        }
+      />
 
       {status === 'loading' && !data ? (
         <div aria-busy="true" aria-label="Cargando kardex">
