@@ -183,6 +183,30 @@ botón de hamburguesa, la tabla de calificaciones pasa a tarjetas y el horario s
 - El primer acceso tras un rato sin uso puede tardar por el plan gratuito de Render.
 
 ## Capturas de pantalla
+## Capturas de pantalla
 
+### Escritorio
+
+| Login | Dashboard |
+|---|---|
+| ![Login](docs/capturas/01-login.png) | ![Dashboard](docs/capturas/06-dashboard.png) |
+
+| Calificaciones | Kardex |
+|---|---|
+| ![Calificaciones](docs/capturas/04-calificaciones.png) | ![Kardex](docs/capturas/07-kardex.png) |
+
+| Horario | Asesorías |
+|---|---|
+| ![Horario](docs/capturas/08-horario.png) | ![Asesorías](docs/capturas/09-asesorias.png) |
+
+| Mis publicaciones |
+|---|
+| ![Mis publicaciones](docs/capturas/12-mis-publicaciones.png) |
+
+### Celular
+
+| Dashboard (móvil) |
+|---|
+| ![Móvil](docs/capturas/m2-dashboard.png) |
 
 
