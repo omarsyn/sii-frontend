@@ -5,10 +5,25 @@ import { useAuth } from '../context/AuthContext'
 import { Spinner } from '../components/ui'
 import { USE_MOCK } from '../config'
 
-function explain(err) {
-  if (err.code === 'NETWORK' || err.code === 'TIMEOUT' || err.code === 'SERVER' || err.status >= 500) {
-    return err.code === 'TIMEOUT' ? err.message : 'El servidor no está disponible. Intenta de nuevo en unos minutos.'
+// Mensaje que manda el backend en el cuerpo de su respuesta ({ "error": "..." } o { "message": "..." }), si lo hay.
+function backendMessage(err) {
+  const d = err.data
+  if (!d || typeof d !== 'object') return null
+  for (const k of ['error', 'message', 'mensaje', 'msg']) {
+    const v = typeof d[k] === 'string' ? d[k].trim() : ''
+    if (v && v.length <= 200) return v
   }
+  return null
+}
+
+function explain(err) {
+  // Sin respuesta del servidor (caído, sin internet o demasiado lento): el mensaje lo arma el cliente.
+  if (err.code === 'NETWORK' || err.code === 'TIMEOUT') return err.message
+  // El servidor respondió: se muestra lo que dice (p. ej. "Credenciales inválidas o falla en el servicio institucional").
+  const delServidor = backendMessage(err)
+  if (delServidor) return delServidor
+  // Respondió sin un mensaje útil (por ejemplo, una página de error en HTML).
+  if (err.status >= 500) return 'El servidor no está disponible. Intenta de nuevo en unos minutos.'
   if (err.status === 400 || err.status === 401 || err.status === 403 || err.status === 404) {
     return 'Correo o contraseña incorrectos. Revisa tus datos e intenta de nuevo.'
   }
