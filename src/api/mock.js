@@ -147,11 +147,17 @@ function save(db) {
 
 const byFecha = (a, b) => new Date(a.fecha_hora) - new Date(b.fecha_hora)
 
-// GET /asesorias: solo los campos del contrato (id, nombre_tutor, materia_asesoria, ubicacion, fecha_hora, cupo_maximo)
+// GET /asesorias: igual que el backend real, devuelve la fila completa más inscritos y cupo_disponible.
+// A propósito NO filtra las pasadas (la semilla trae una): así se comprueba que el portal las oculta
+// aunque el servidor las envíe. El backend real sí las filtra.
 export async function listAsesorias() {
   await wait(500)
-  return load()
-    .asesorias.map(({ id, nombre_tutor, materia_asesoria, ubicacion, fecha_hora, cupo_maximo }) => ({ id, nombre_tutor, materia_asesoria, ubicacion, fecha_hora, cupo_maximo }))
+  const db = load()
+  return db.asesorias
+    .map((a) => {
+      const inscritos = db.inscripciones.filter((i) => i.asesoria_id === a.id).length
+      return { ...a, inscritos, cupo_disponible: Math.max(0, a.cupo_maximo - inscritos) }
+    })
     .sort(byFecha)
 }
 
@@ -168,7 +174,7 @@ export async function createAsesoria(body) {
   return { id: a.id }
 }
 
-// POST /asesorias/inscripcion (409 si ya estaba inscrito)
+// POST /asesorias/inscripcion (409 si ya estaba inscrito, si el cupo está lleno o si ya pasó)
 export async function inscribirse(body) {
   await wait(500)
   const missing = ['asesoria_id', 'numero_control_alumno', 'nombre_alumno'].filter((f) => !body?.[f])
@@ -176,10 +182,48 @@ export async function inscribirse(body) {
   const db = load()
   const a = db.asesorias.find((x) => x.id === body.asesoria_id)
   if (!a) throw new ApiError('Esta asesoría ya no está disponible.', { status: 404 })
+  if (new Date(a.fecha_hora) < new Date()) {
+    throw new ApiError('Esta asesoría ya ocurrió.', { status: 409, code: 'CONFLICT', data: { codigo: 'ASESORIA_PASADA' } })
+  }
   if (db.inscripciones.some((i) => i.asesoria_id === body.asesoria_id && i.numero_control_alumno === body.numero_control_alumno)) {
-    throw new ApiError('Ya estás inscrito en esta asesoría.', { status: 409, code: 'CONFLICT' })
+    throw new ApiError('Ya estás inscrito en esta asesoría.', { status: 409, code: 'CONFLICT', data: { codigo: 'YA_INSCRITO' } })
+  }
+  if (db.inscripciones.filter((i) => i.asesoria_id === body.asesoria_id).length >= a.cupo_maximo) {
+    throw new ApiError('Esta asesoría ya no tiene lugares disponibles.', { status: 409, code: 'CONFLICT', data: { codigo: 'CUPO_LLENO' } })
   }
   db.inscripciones.push({ asesoria_id: body.asesoria_id, numero_control_alumno: body.numero_control_alumno })
   save(db)
   return { ok: true }
 }
+
+// PUT /asesorias/:id (solo el tutor; no se puede bajar el cupo por debajo de los inscritos)
+export async function updateAsesoria(id, body) {
+  await wait(500)
+  const db = load()
+  const a = db.asesorias.find((x) => x.id === id)
+  if (!a) throw new ApiError('La asesoría no existe.', { status: 404 })
+  if (a.numero_control_tutor !== body?.numero_control_tutor) throw new ApiError('Solo el tutor puede modificar esta asesoría.', { status: 403 })
+  const inscritos = db.inscripciones.filter((i) => i.asesoria_id === id).length
+  if (body.cupo_maximo !== undefined && Number(body.cupo_maximo) < inscritos) {
+    throw new ApiError(`No puedes bajar el cupo a menos de los ${inscritos} alumnos ya inscritos.`, { status: 409, code: 'CONFLICT' })
+  }
+  for (const k of ['materia_asesoria', 'descripcion_tema', 'ubicacion', 'fecha_hora', 'cupo_maximo']) {
+    if (body[k] !== undefined) a[k] = body[k]
+  }
+  save(db)
+  return { message: 'Asesoría actualizada', data: a }
+}
+
+// DELETE /asesorias/:id?numero_control_tutor=... (solo el tutor; borra también sus inscripciones)
+export async function deleteAsesoria(id, numeroControlTutor) {
+  await wait(500)
+  const db = load()
+  const a = db.asesorias.find((x) => x.id === id)
+  if (!a) throw new ApiError('La asesoría no existe.', { status: 404 })
+  if (a.numero_control_tutor !== numeroControlTutor) throw new ApiError('Solo el tutor puede eliminar esta asesoría.', { status: 403 })
+  db.asesorias = db.asesorias.filter((x) => x.id !== id)
+  db.inscripciones = db.inscripciones.filter((i) => i.asesoria_id !== id)
+  save(db)
+  return { message: 'Asesoría eliminada' }
+}
+

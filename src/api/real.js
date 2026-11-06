@@ -44,3 +44,9 @@ export const listAsesorias = () => request(`${L}/asesorias`)
 // Cuerpos exactamente como los define el contrato (AsesoriaInput / InscripcionInput).
 export const createAsesoria = (body) => request(`${L}/asesorias`, { method: 'POST', body })
 export const inscribirse = (body) => request(`${L}/asesorias/inscripcion`, { method: 'POST', body })
+
+// Editar y eliminar (solo el tutor). numero_control_tutor identifica a quien lo pide; el backend lo compara con el de la asesoría.
+export const updateAsesoria = (id, body) => request(`${L}/asesorias/${encodeURIComponent(id)}`, { method: 'PUT', body })
+export const deleteAsesoria = (id, numeroControlTutor) =>
+  request(`${L}/asesorias/${encodeURIComponent(id)}?numero_control_tutor=${encodeURIComponent(numeroControlTutor)}`, { method: 'DELETE' })
+

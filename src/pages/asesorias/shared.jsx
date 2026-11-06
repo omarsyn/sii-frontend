@@ -92,14 +92,18 @@ function Field({ id, label, hint, error, children }) {
   )
 }
 
-/** Formulario para publicar una asesoría (el contrato del backend no define edición). */
-export function AsesoriaFormModal({ onSubmit, onClose }) {
+/**
+ * Formulario para publicar o editar una asesoría.
+ * Con `initial` funciona como edición; `minCupo` impide bajar el cupo por debajo de los ya inscritos.
+ */
+export function AsesoriaFormModal({ onSubmit, onClose, initial = null, minCupo = 0 }) {
+  const editando = Boolean(initial)
   const [form, setForm] = useState({
-    materia_asesoria: '',
-    descripcion_tema: '',
-    ubicacion: '',
-    fecha_hora: '',
-    cupo_maximo: 5,
+    materia_asesoria: initial?.materia_asesoria ?? '',
+    descripcion_tema: initial?.descripcion_tema ?? '',
+    ubicacion: initial?.ubicacion ?? '',
+    fecha_hora: initial ? isoToLocalInput(initial.fecha_hora) : '',
+    cupo_maximo: initial?.cupo_maximo ?? 5,
   })
   const [errors, setErrors] = useState({})
   const [serverError, setServerError] = useState(null)
@@ -117,6 +121,7 @@ export function AsesoriaFormModal({ onSubmit, onClose }) {
     else if (new Date(form.fecha_hora).getTime() <= Date.now()) e.fecha_hora = 'Elige una fecha futura.'
     const cupo = Number(form.cupo_maximo)
     if (!Number.isInteger(cupo) || cupo < 1 || cupo > 50) e.cupo_maximo = 'El cupo debe ser un número entre 1 y 50.'
+    else if (cupo < minCupo) e.cupo_maximo = `Ya hay ${minCupo} ${minCupo === 1 ? 'alumno inscrito' : 'alumnos inscritos'}: el cupo no puede ser menor.`
     return e
   }
 
@@ -143,13 +148,15 @@ export function AsesoriaFormModal({ onSubmit, onClose }) {
 
   return (
     <Modal
-      title="Publicar asesoría"
+      title={editando ? 'Editar asesoría' : 'Publicar asesoría'}
       onClose={saving ? () => {} : onClose}
       footer={
         <>
           <button type="button" className="btn btn-default" onClick={onClose} disabled={saving}>Volver</button>
           <button type="submit" form="asesoria-form" className="btn btn-primary" disabled={saving}>
-            {saving ? <><Spinner size={16} /> Publicando…</> : 'Publicar asesoría'}
+            {saving
+              ? <><Spinner size={16} /> {editando ? 'Guardando…' : 'Publicando…'}</>
+              : editando ? 'Guardar cambios' : 'Publicar asesoría'}
           </button>
         </>
       }
@@ -175,7 +182,7 @@ export function AsesoriaFormModal({ onSubmit, onClose }) {
             <input id="fecha_hora" className="form-control" type="datetime-local" min={nowLocal} value={form.fecha_hora} onChange={set('fecha_hora')} />
           </Field>
           <Field id="cupo_maximo" error={errors.cupo_maximo} label="Cupo máximo">
-            <input id="cupo_maximo" className="form-control" type="number" inputMode="numeric" min={1} max={50} value={form.cupo_maximo} onChange={set('cupo_maximo')} />
+            <input id="cupo_maximo" className="form-control" type="number" inputMode="numeric" min={Math.max(1, minCupo)} max={50} value={form.cupo_maximo} onChange={set('cupo_maximo')} />
           </Field>
         </div>
       </form>

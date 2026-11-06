@@ -8,12 +8,16 @@ import { getInscritas } from '../utils/inscripciones'
 import { norm } from '../utils/format'
 import { normalizeAsesoria, toArray } from '../utils/normalize'
 
+// Una asesoría cuya fecha y hora ya pasaron no se muestra en ninguna vista del portal.
+const yaOcurrio = (a) => !(new Date(a.fecha_hora).getTime() >= Date.now())
+
 export async function loadAsesorias() {
   const [payload, who] = await Promise.all([api.listAsesorias(), getIdentity().catch(() => null)])
   const inscritas = who ? getInscritas(who.numeroControl) : []
   const byId = new Map(inscritas.map((i) => [i.id, i]))
   return toArray(payload)
     .map(normalizeAsesoria)
+    .filter((a) => !yaOcurrio(a))
     .map((a) => {
       const es_mia = Boolean(
         who &&

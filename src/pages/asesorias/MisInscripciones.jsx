@@ -1,9 +1,8 @@
-import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useAsync } from '../../hooks/useAsync'
 import { EmptyState, ErrorState, PageHeader, Skeleton } from '../../components/ui'
 import { loadAsesorias } from '../../api/asesorias'
-import { AsesoriaCard, AsesoriasTabs, isPast } from './shared'
+import { AsesoriaCard, AsesoriasTabs } from './shared'
 
 const CRUMBS = [
   { to: '/', label: 'Inicio' },
@@ -12,15 +11,8 @@ const CRUMBS = [
 ]
 
 export default function MisInscripciones() {
+  // loadAsesorias ya deja fuera las asesorías que pasaron.
   const { data, status, error, reload } = useAsync(async () => (await loadAsesorias()).filter((a) => a.ya_inscrito), [])
-
-  const { proximas, pasadas } = useMemo(() => {
-    const all = data ?? []
-    return {
-      proximas: all.filter((a) => a.estatus === 'activa' && !isPast(a)),
-      pasadas: all.filter((a) => !(a.estatus === 'activa' && !isPast(a))),
-    }
-  }, [data])
 
   return (
     <>
@@ -41,27 +33,11 @@ export default function MisInscripciones() {
           Encuentra una materia que quieras reforzar y reserva tu lugar.
         </EmptyState>
       ) : (
-        <>
-          {proximas.length ? (
-            <section aria-labelledby="h-prox">
-              <h2 id="h-prox" className="section-title">Próximas</h2>
-              <div className="ases-grid">
-                {proximas.map((a) => (
-                  <AsesoriaCard key={a.id} a={a} footer={<span className="label label-success">Ya estás inscrito</span>} />
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {pasadas.length ? (
-            <section aria-labelledby="h-pas">
-              <h2 id="h-pas" className="section-title">Anteriores</h2>
-              <div className="ases-grid is-muted">
-                {pasadas.map((a) => <AsesoriaCard key={a.id} a={a} />)}
-              </div>
-            </section>
-          ) : null}
-        </>
+        <div className="ases-grid">
+          {data.map((a) => (
+            <AsesoriaCard key={a.id} a={a} footer={<span className="label label-success">Ya estás inscrito</span>} />
+          ))}
+        </div>
       )}
     </>
   )

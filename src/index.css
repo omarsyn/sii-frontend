@@ -1318,6 +1318,16 @@ textarea.form-control {
 .ases-grid.is-top {
   align-items: start;
 }
+.ases-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ases-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .ases-grid.is-muted {
   opacity: 0.78;
 }
